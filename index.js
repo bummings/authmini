@@ -13,7 +13,11 @@ server.get("/", (req, res) => {
   res.send("Its Alive!");
 });
 
-server.get("/register", (req, res) => {
+// server.post('/login', (req, res) => {
+
+// })
+
+server.post("/register", (req, res) => {
   const credentials = req.body;
 
   // hash the password
@@ -25,14 +29,35 @@ server.get("/register", (req, res) => {
     .insert(credentials)
     .then(ids => {
       const id = ids[0];
-      res.status(201).json({ newUserId: id });
+      res
+        .status(201)
+        .json({ newUserId: id })
+        .catch(err => {
+          res.status(500).json(err);
+        });
     });
 });
 
-// protect this route, only authenticated users should see it
-server.get("/api/users", (req, res) => {
+server.post("/login", (req, res) => {
+  const credentials = req.body;
+
   db("users")
-    .select("id", "username")
+    .where({ username: credentials.username })
+    .first()
+    .then(user => {
+      if (user && bcrypt.compareSync(credentials.password, user.password)) {
+        res.status(200).json({ welcome: user.username });
+      } else {
+        res.status(401).json({ message: "nah man" });
+      }
+    })
+    .catch(err => res.status(500).json({ err }));
+});
+
+// protect this route, only authenticated users should see it
+server.get("/users", (req, res) => {
+  db("users")
+    .select("id", "username", "password")
     .then(users => {
       res.json(users);
     })
